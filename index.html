@@ -1,0 +1,339 @@
+<!-- vue learning project-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>toDo - lista zadań do wykonania</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.0/spectre.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.0/spectre-icons.min.css">
+    <style>
+        .container {
+            margin-top: 100px;
+            margin-bottom: 100px;
+        }
+        [v-cloak] {
+            display: none;
+        }
+        .cross{
+            text-decoration: line-through;
+            opacity: .7;
+        }
+        .getNewTitle{
+            margin-bottom: 20px;
+        }
+        .title-input{
+        	display: flex;
+        	justify-content: space-between;
+        	align-items: center;
+        	margin-bottom: 20px;
+        }
+        .title-input h1{
+        	margin-bottom: 0px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container grid-lg">
+        <div id="app" v-cloak>
+
+        	<add-item @addnewtask='addnewtask'></add-item>
+
+  			<todo-list :filtered="filtered"></todo-list>
+
+            <filter-tasks
+            style="margin-top: 25px;"
+            @setstatus="setstatus"
+            :alltasks="alltasks"
+            :activetasks="activetasks"
+            :donetasks="donetasks"
+            :deletedtasks="deletedtasks">
+            </filter-tasks>    
+
+        </div>
+    </div>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js"></script>
+	<script>
+
+	var Event = new Vue({
+		methods: {
+			remove: function(index){
+				this.$emit("remove", index);
+			},
+			done: function(index){
+				this.$emit("done", index);
+			},
+			undone: function(index){
+				this.$emit("undone", index);
+			},
+			permanentremove: function(index){
+				this.$emit("permanentremove", index);
+			},
+			undoremove: function(index){
+				this.$emit("undoremove", index);
+			}			
+		}
+	});	
+
+	Vue.component("todo-list", {
+		template: `
+            <table class="table">
+            	<thead>
+	                <tr>
+	                    <th>Nr.</th>
+	                    <th>Zadanie</th>
+	                    <th>Edytuj</th>
+	                    <th>Oznacz jako wykonane</th>
+	                    <th>Usuń</th>
+	                </tr>
+                </thead>
+
+                <tbody>
+	                <todo-item v-for="(item, index) in filtered" 
+	                :item="item"
+	                :index="index"
+	                :key="item.id"  
+	                :class="{'cross' : item.isRemove}"/>
+                </tbody>
+            </table>  
+		`,
+		props: ["filtered"]
+	});
+
+	Vue.component("filter-tasks", {
+		template: `
+			<div style="text-align:center;">
+	            <button class="btn" :class="{'active' : status === 'all'}" @click="setstatus('all')" title="pokaż wszystkie">All ({{ alltasks }})</button>
+	            <button class="btn" :class="{'active' : status === 'active'}" @click="setstatus('active')" title="pokaż aktywne">Active ({{ activetasks }})</button>
+	            <button class="btn" :class="{'active' : status === 'done'}" @click="setstatus('done')" title="pokaż ukończone">Done ({{ donetasks }})</button>
+	            <button class="btn" :class="{'active' : status === 'remove'}" @click="setstatus('remove')" title="pokaż usunięte">Deleted ({{ deletedtasks }})</button>
+	        </div>
+		`,
+		props: ["alltasks", "activetasks", "donetasks", "deletedtasks"],
+		data: function(){
+			return {
+				status: 'active'
+			}
+		},methods: {
+			setstatus: function(status){
+				this.status = status;
+				this.$emit("setstatus", status);
+			}
+		}		
+	});
+
+	Vue.component("add-item", {
+		template: `
+			<div>
+				<div class="title-input">
+					<template v-if="editMode">
+			            <input type="text" class="form-input" v-model.lazy="listName" @keyup.enter="editMode = !editMode">
+					</template>
+
+					<template v-else>
+						<h1 v-text="listName" @click="editMode = !editMode" style="display:inline-block;"></h1>
+					</template>
+
+					<button class="btn btn-primary" @click="editMode = !editMode" title="edycja tytułu">
+			            <i class="icon" :class="{'icon-edit' : !editMode, 'icon-check' : editMode}"></i>
+			        </button>
+				</div>
+
+	            <div class="input-group">
+	                <span class="input-group-addon addon-lg">Dodaj nowe zadanie</span>
+	                <input class="form-input input-lg" type="text" placeholder="..." v-model="newTaskName" @keyup.enter="addnewtask">
+	                <button class="btn btn-primary input-group-btn btn-lg" @click="addnewtask">Dodaj</button>
+	            </div>
+			</div>
+		`,
+		data: function(){
+			return {
+				newTaskName: '',
+				listName: 'toDo',
+				editMode: false
+			}
+		},
+		methods: {
+			addnewtask: function(){
+				this.$emit("addnewtask", this.newTaskName);
+				this.newTaskName = '';
+			}
+		}		
+	});	
+
+	Vue.component("todo-item", {
+		template: `
+                <tr>
+                    <td>{{ index + 1 }}</td>
+
+                    <td>
+                		<template v-if="editMode">
+	                        <div class="form-group">
+	                            <input type="text" class="form-input" v-model.lazy="item.task">
+	                        </div>                		
+                    	</template>
+
+                    	<template v-else>
+	                    	{{ item.task }}
+                    	</template> 
+                    </td>
+
+                    <td>
+	                    <button class="btn btn-primary" @click="editMode = !editMode">
+		                    <i class="icon" :class="{'icon-edit' : !editMode, 'icon-check' : editMode}"></i>
+		                </button>
+                    </td>
+
+                    <td>
+                    	<template v-if="item.isDone">
+	                    	<button class="btn btn-primary" @click="undone(item.id)" title="edytuj zadanie">
+		                        <i class="icon icon-check"></i>
+		                    </button>
+                    	</template>
+
+                    	<template v-else>
+	                    	<button class="btn btn-primary" @click="done(item.id)" title="zmiana statusu zadania">
+		                        <i class="icon icon-stop"></i>
+		                    </button>
+                    	</template>                    	
+                   	</td>
+
+                    <td>
+                    	<template v-if="item.isRemove">
+	                    	<button class="btn btn-error" @click="permanentremove(item.id)" title="usuń definitywnie">
+		                        <i class="icon icon-delete"></i>
+		                    </button>
+		                    <button class="btn btn-error" @click="undoremove(item.id)" title="przywróć">
+		                        <i class="icon icon-refresh"></i>
+		                    </button>		                    
+                    	</template>
+
+                    	<template v-else>
+		                    <button class="btn btn-error" @click="remove(item.id)" title="usuń">
+		                        <i class="icon icon-delete"></i>
+		                    </button>
+	                    </template>
+	                </td>
+                </tr>
+		`,
+		props: ["item", "index"],
+		data: function(){
+			return {
+				editMode: false
+			}
+		},
+		methods: {
+			done: function(index){
+				Event.done(index);
+			},
+			undone: function(index){
+				Event.undone(index);
+			},
+			remove: function(index){
+				Event.remove(index);
+			},
+			permanentremove: function(index){
+				Event.permanentremove(index);
+			},
+			undoremove: function(index){
+				Event.undoremove(index);
+			}		
+		}
+	});
+
+	new Vue({
+		el: '#app',
+		data: {
+            items: [
+                { 'id' : 1,  'task' : 'Odkurzyć', 'isDone' : true, 'isRemove' : false },
+                { 'id' : 2,  'task' : 'Umyć naczynia', 'isDone' : false, 'isRemove' : false },
+                { 'id' : 3,  'task' : 'Przeczytać książkę', 'isDone' : false, 'isRemove' : false },
+                { 'id' : 4,  'task' : 'Ugotować obiad', 'isDone' : false, 'isRemove' : true }
+            ],
+            status: 'active',
+            filtered: []	
+		},
+		computed: {
+			alltasks: function(){
+				return this.items.length;
+			},
+			activetasks: function(){
+				var filtered = this.items.filter(val => val.isDone !== true && val.isRemove !== true);
+				return filtered.length;
+			},
+			donetasks: function(){
+				var filtered = this.items.filter(val => val.isDone === true);
+				return filtered.length;
+			},
+			deletedtasks: function(){
+				var filtered = this.items.filter(val => val.isRemove === true);
+				return filtered.length;
+			}
+		},
+		methods: {
+			setstatus: function(status){
+				this.status = status;
+				if(status === 'active'){
+					this.filtered = this.items.filter(val => val.isDone !== true && val.isRemove !== true);
+				}else if(status === 'done'){
+					this.filtered = this.items.filter(val => val.isDone === true);
+				}else if(status === 'remove'){
+					this.filtered = this.items.filter(val => val.isRemove === true);
+				}else{
+					this.filtered = this.items.filter(val => val);
+				}
+			},
+			done: function(index){
+				var index = _.findIndex(this.items, ["id", index]);
+                this.items[index].isDone = true;
+			},
+			undone: function(index){
+				var index = _.findIndex(this.items, ["id", index]);
+                this.items[index].isDone = false;
+			},
+			remove: function(index){
+				var index = _.findIndex(this.items, ["id", index]);
+				this.items[index].isRemove = true;
+			},
+			permanentremove: function(index){
+				var confirmation = confirm('Jesteś pewien, że chcesz całkowicie usunąć to zadanie z listy?');
+				if(confirmation){
+					var index = _.findIndex(this.items, ["id", index]);
+					this.items.splice(index, 1);					
+				}
+
+				//aktualizacja wyświetlanej listy zadań
+				this.setstatus(this.status);
+			},
+			undoremove: function(index){
+				var index = _.findIndex(this.items, ["id", index]);
+				this.items[index].isRemove = false;
+			},
+			addnewtask: function(taskName){
+				if(taskName.length > 2){
+	                this.items.push({
+	                    'id' : this.items.length+1,
+	                    'task' : taskName,
+	                    'isDone' : false,
+	                    'isDeleted' : false
+	                });		
+
+	                //aktualizacja wyświetlanej listy zadań	
+	                this.setstatus(this.status);					
+				}
+			}						
+		},
+		created: function(){
+			this.filtered = this.items.filter(val => val.isDone !== true && val.isRemove !== true);
+			Event.$on("remove", this.remove);
+			Event.$on("undone", this.undone);
+			Event.$on("done", this.done);
+			Event.$on("permanentremove", this.permanentremove);
+			Event.$on("undoremove", this.undoremove);												
+		}
+	});
+</script>
+</body>
+</html>
