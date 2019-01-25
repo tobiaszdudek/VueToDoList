@@ -1,0 +1,28 @@
+.container {
+    margin-top: 100px;
+    margin-bottom: 100px;
+}
+
+[v-cloak] {
+    display: none;
+}
+
+.cross {
+    text-decoration: line-through;
+    opacity: .7;
+}
+
+.getNewTitle {
+    margin-bottom: 20px;
+}
+
+.title-input {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.title-input h1 {
+    margin-bottom: 0px;
+}
